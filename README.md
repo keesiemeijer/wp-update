@@ -13,9 +13,9 @@ requirements:
 
 * [WP-CLI](http://wp-cli.org/)
 
-Install WP-CLI if not installed. The command `wp` should be executable and in your PATH (e.g. /usr/local/bin/). See the [installation instructions](http://wp-cli.org/#installing) for WP-CLI.
+If it's not installed already see the [installation instructions](http://wp-cli.org/#installing) for WP-CLI. The command `wp` should be executable and in your `PATH` (e.g. /usr/local/bin/). 
 
-If you have permission issues or have trouble moving files in your PATH see [this answer](https://stackoverflow.com/a/14650235) on stackoverflow
+If you have permission issues or have trouble moving files in your `PATH` see [this answer](https://stackoverflow.com/a/14650235) on stackoverflow.
 
 ## Installation
 
@@ -31,7 +31,7 @@ git clone https://github.com/keesiemeijer/wp-update.git
 readonly DOMAINS_PATH="$HOME/domains"
 ```
 
-This variable points to the (parent) dirictory of your WP site(s).
+This variable points to the parent dirictory of your WP site(s).
 Example:
 
 ```
@@ -50,41 +50,64 @@ domains <- point it here
 chmod +x wp-update
 ```
 
-5 Move it in your PATH (e.g /usr/local/bin/). 
+5 Move it in your `PATH` (e.g /usr/local/bin/). 
 
 ```bash
 mv wp-update /usr/local/bin/wp-update
 ```
+If wp-update was installed successfully, you should see something like this when you run `wp-update --help`
 
-Now you can use the `wp-update` command to update your sites. Check it out by using `wp-update --help`
+```
+wp-update usage:
+	wp-update <website-directory> [option...]
+
+wp-update example:
+	wp-update my-website --plugins
+
+Options controlling update type:
+	-w, --core           Update WordPress core
+	-p, --plugins        Update plugins
+	-t, --themes         Update themes
+	-l, --translations   Update translations
+	-c, --comments       Update comments
+	-a, --all            Update everything
+
+	Without an update type option plungins and themes are updated
+
+Options extra:
+	-h, --help           Show help
+	-f, --force          Force update (without a prompt to abort updating (themes, plugins, comments)
+	-x, --no-db-backup   Don't make a database backup before and after updating
+```
 
 ## Usage
 
-```bash
+```
 wp-update <site-directory> [option...]
 ```
 
 Use `wp-update --help` to see what options are available
 
-Without options the plugins and themes are updated by default. Example:
+Without options the plugins and themes are updated by default.
+Example:
 
-```bash
+```
 wp-update <site-directory>
 ```
 
 The same example, but with options used:
 
-```bash 
+```
 wp-update <site-directory> --plugins --themes
 ```
 
 Example to update everything
 
-```bash
+```
 wp-update <site-directory> --all
 ```
 
-##Backups
+## Backups
 
 Backups are only created when something is updated. Newer backups replace previous backups as not to clutter your website.
 
