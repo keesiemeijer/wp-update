@@ -55,7 +55,8 @@
 # ============================================================================
 
 # Edit this variable to point to a directory with WordPress directories in it (see above)
-readonly DOMAINS_PATH="$HOME/domains"
+#readonly DOMAINS_PATH="$HOME/domains"
+readonly DOMAINS_PATH="/app"
 
 # =============================================================================
 # USAGE
@@ -93,6 +94,10 @@ readonly DOMAINS_PATH="$HOME/domains"
 # 
 # Newer backups replace previous backups as not to clutter your website.
 # =============================================================================
+
+
+
+# Start of WP Update script
 
 if [ $# -lt 1 ]; then
 		printf "\nUsage: %s <website-directory> [option...]\n" "$0"
@@ -167,15 +172,15 @@ function make_database_backup(){
 	fi
 
 	printf "Creating a backup of the %s database ${prefix} updating...\n" "$WEBSITE"
-	wp db export "${prefix}_update_${WEBSITE}.sql" --allow-root
+	wp db export "${prefix}_update_${WEBSITE}.sql" --path="$SITE_PATH" --allow-root
 
 	if ! is_file "${prefix}_update_${WEBSITE}.sql"; then
-		printf "\e[31mWarning: No database backup file found in: %s\033[0m\n" "$DOMAINS_PATH/$WEBSITE"
+		printf "\e[31mWarning: No database backup file found in: %s\033[0m\n" "$SITE_PATH"
 		return 1
 	fi
 
 	if ! [[ -s "${prefix}_update_${WEBSITE}.sql" ]]; then
-		printf "\e[31mWarning: database backup file is empty in: %s\033[0m\n" "$DOMAINS_PATH/$WEBSITE"
+		printf "\e[31mWarning: database backup file is empty in: %s\033[0m\n" "$SITE_PATH"
 		return 1
 	fi
 
@@ -191,15 +196,24 @@ function wp_core_is_installed(){
 	fi
 
 	# Check if WP tables exist
-	wp core is-installed --allow-root 2> /dev/null
+	wp core is-installed --path="$SITE_PATH" --allow-root 2> /dev/null
 }
 
 function update_wp_core(){
 	printf "Checking WordPress version...\n"
-	update=$(wp core check-update --field=version --format=count --allow-root)
+	update=$(wp core check-update --field=version --format=count --path="$SITE_PATH" --allow-root)
 	if [[ -z $update ]]; then
 		printf "WordPress is at the latest version\n"
 		return 0
+	fi
+
+	printf "Newer WordPress version available.\n"
+	if [[ "$USE_PROMPT" = true ]]; then
+		read -p "Do you want to update WordPress [y/n]" -r
+		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
+			printf "Stopped updating WordPress core\n"
+			return 1
+		fi
 	fi
 
 	maybe_do_database_backup
@@ -213,24 +227,35 @@ function update_wp_core(){
 function update_language(){
 	printf "Checking translations...\n"
 
-	update=$(wp core language list --update=available --format=count --allow-root)
+	update=$(wp core language list --update=available --format=count --path="$SITE_PATH" --allow-root)
 	if [[ $update = 0 ]]; then
 		printf "No language updates available\n"
 		return 0
 	fi
 
+	printf "New translations available.\n"
+	if [[ "$USE_PROMPT" = true ]]; then
+		wp core language list --update=available --path="$SITE_PATH" --allow-root
+		read -p "Do you want to update translations? [y/n]" -r
+		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
+			printf "Stopped updating translations\n"
+			return 1
+		fi
+	fi
+
 	maybe_do_database_backup
 
 	printf "Updating translations\n"
-	wp core language update --allow-root
+	wp core language update --path="$SITE_PATH" --allow-root
 }
 
 function update_asset(){
 	local asset_type=$1
+	local asset_path=$(wp "$asset_type" path --path="$SITE_PATH" --allow-root)
 	local update
 
 	printf "Checking %s updates...\n" "$asset_type"
-	update=$(wp "$asset_type" list --update=available --number=1 --format=count --allow-root)
+	update=$(wp "$asset_type" list --update=available --number=1 --format=count --path="$SITE_PATH" --allow-root)
 	if [[ $update = 0 ]]; then
 		printf "No %s updates available\n" "$asset_type"
 		return 0
@@ -239,29 +264,34 @@ function update_asset(){
 	printf "Updating %ss\n" "$asset_type"
 
 	if [[ "$USE_PROMPT" = true ]]; then
-		wp "$asset_type" update --all --dry-run --allow-root
+		wp "$asset_type" update --all --dry-run --path="$SITE_PATH" --allow-root
 
 		read -p "Do you want to update all ${asset_type}s [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
-			printf "%s updates aborted\n" "$asset_type"
+			printf "Stopped updating %s\n" "$asset_type"
 			return 1
 		fi
 	fi
 
 	printf "backing up %ss\n" "$asset_type"
-	if is_file "$DOMAINS_PATH/$WEBSITE/wp-content/${asset_type}s-backup"; then
-		rm -rf "$DOMAINS_PATH/$WEBSITE/wp-content/${asset_type}s-backup"
+	if is_dir "wp-update-$asset_path-backup"; then
+		rm -rf "wp-update-$asset_path-backup"
 	fi
 
-	cp -r "$DOMAINS_PATH/$WEBSITE/wp-content/${asset_type}s" "$DOMAINS_PATH/$WEBSITE/wp-content/${asset_type}s-backup"
+	if is_dir "$asset_path"; then
+		cp -r "$asset_path" "wp-update-$asset_path-backup"
+	else
+		printf "Could not find %ss path\n" "$asset_type"
+		return 0
+	fi
 
 	maybe_do_database_backup
 
 	printf "Updating %ss\n" "$asset_type"
-	wp "$asset_type" update --all --allow-root
+	wp "$asset_type" update --all --path="$SITE_PATH" --allow-root
 	UPDATE_TRANSLATIONS=true
 
-	return 0	
+	return 0
 }
 
 function update_comments() {
@@ -269,17 +299,17 @@ function update_comments() {
 
 	printf "Checking %s comments...\n" "$status"
 
-	count=$(wp comment list --number=1 --status="$status" --format=count --allow-root)
+	count=$(wp comment list --number=1 --status="$status" --format=count --path="$SITE_PATH" --allow-root)
 	if [[ $count = 0 ]]; then
 		printf "No %s comments found\n" "$status"
 		return 0
 	fi
 
 	if [[ "$USE_PROMPT" = true ]]; then
-		wp comment list --status="$status" --fields=ID,comment_author,comment_author_email,comment_approved,comment_content --allow-root
+		wp comment list --status="$status" --fields=ID,comment_author,comment_author_email,comment_approved,comment_content --path="$SITE_PATH" --allow-root
 		read -p "Do you want to delete all ${status} comments [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
-			printf "Deleting %s comments aborted\n" "$status"
+			printf "Stopped deleting %s comments\n" "$status"
 			return 1
 		fi
 	fi
@@ -287,7 +317,7 @@ function update_comments() {
 	maybe_do_database_backup
 
 	printf "Deleting %s comments\n" "$status"
-	wp comment delete $(wp comment list --status="$status" --format=ids --allow-root) --allow-root
+	wp comment delete $(wp comment list --status="$status" --format=ids --path="$SITE_PATH" --allow-root) --path="$SITE_PATH" --allow-root
 	
 	return 0
 }
@@ -315,10 +345,10 @@ while test $# -gt 0; do
 				printf -- "\t-l, --translations   Update translations\n"
 				printf -- "\t-c, --comments       Update comments\n"
 				printf -- "\t-a, --all            Update everything\n\n"
-				printf "\tWithout an update type option plungins and themes are updated\n\n"
+				printf "\tIf you don't provide an update type option the --all option is used\n\n"
 				printf "Options extra:\n"
 				printf -- "\t-h, --help           Show help\n"
-				printf -- "\t-f, --force          Force update (without a prompt to abort updating (themes, plugins, comments)\n"
+				printf -- "\t-f, --force          Force update without confirmation prompts\n"
 				printf -- "\t-x, --no-db-backup   Don't make a database backup before and after updating\n\n"
 				exit 0
 				;;
@@ -339,29 +369,32 @@ while test $# -gt 0; do
 	fi
 done
 
-# Check if options is empty
-if [[ ${#ALLOPTIONS[@]} -eq 0 ]]; then
-	ALLOPTIONS=("assets")
-fi
-
-# Check if `all` was used
-if [[ ${OPTIONS["all"]} ]]; then
+# Check if options is empty or if option `all` is used.
+if [[ ${#ALLOPTIONS[@]} -eq 0 || ${OPTIONS["all"]} ]]; then
 	ALLOPTIONS=("all")
+	UPDATE_TRANSLATIONS=true
 fi
  
 # =============================================================================
 # Start updates
 # =============================================================================
 
-if ! is_dir "$DOMAINS_PATH/$WEBSITE"; then
+if [ -z "$DOMAINS_PATH" ]; then
+	printf "Please provide a valid domains directory in the wp-update file\n"
+	exit 1
+fi
+
+SITE_PATH="$DOMAINS_PATH/$WEBSITE"
+
+if ! is_dir "$SITE_PATH"; then
 	printf "Could not find Website directory: %s\n" "$WEBSITE"
 	exit 1
 fi
 
-cd "$DOMAINS_PATH/$WEBSITE" || exit
+cd "$SITE_PATH" || exit
 
 if ! wp_core_is_installed; then
-	printf "No WordPress website found in: %s\n" "$DOMAINS_PATH/$WEBSITE"
+	printf "No WordPress website found in: %s\n" "$SITE_PATH"
 	exit 1
 fi
 
@@ -380,18 +413,14 @@ fi
 for type in "${ALLOPTIONS[@]}"
 do  
 	case "$type" in
-			assets)
-				update_asset "plugin"
-				update_asset "theme"
-				;;
-			core)
-				update_wp_core
-				;;
 			plugins)
 				update_asset "plugin"
 				;;
 			themes)
 				update_asset "theme"
+				;;
+			core)
+				update_wp_core
 				;;
 			comments)
 				update_comments "spam"
