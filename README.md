@@ -55,7 +55,7 @@ chmod +x wp-update
 ```bash
 mv wp-update /usr/local/bin/wp-update
 ```
-If wp-update was installed successfully, you should see something like this when you run `wp-update --help`
+If the WP Update script was installed successfully, you should see something like this when you run `wp-update --help`
 
 ```
 wp-update usage:
@@ -72,11 +72,11 @@ Options controlling update type:
 	-c, --comments       Update comments
 	-a, --all            Update everything
 
-	Without an update type option plungins and themes are updated
+	If you don't provide an update type option the --all option is used
 
 Options extra:
 	-h, --help           Show help
-	-f, --force          Force update (without a prompt to abort updating (themes, plugins, comments)
+	-f, --force          Force update without confirmation prompts
 	-x, --no-db-backup   Don't make a database backup before and after updating
 ```
 
@@ -113,7 +113,7 @@ Backups are only created when something is updated. Newer backups replace previo
 
 Database backups are created before and after updating. They are saved in the root directory of your website.
 
-**Note** Test the database backups made by this script before you rely on this feature.
+**Note**: Test the database backups made by this script before you rely on this feature.
 
 Plugin and theme folder backups are made before updating plugins or themes. They are saved in the `wp-content` folder of your website as `themes-backup` and `plugins-backup`
 
