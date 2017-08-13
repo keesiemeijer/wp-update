@@ -23,14 +23,15 @@
 # executable and in your PATH (e.g. /usr/local/bin/).
 # See the installation instructions for WP-CLI: http://wp-cli.org/#installing
 # 
-# If you have permission issues when moving it in your Path see https://stackoverflow.com/a/14650235
+# If you have permission issues or have trouble moving files in your `PATH` 
+# see https://stackoverflow.com/a/14650235
 # =============================================================================
 
 # =============================================================================
 # INSTALLATION
 # 
-# 1 Download this script
-# curl -o wp-update https://gist.githubusercontent.com/keesiemeijer/1286ab6695462cf6cf793569c6c356b8/raw
+# 1 Clone this repository
+# git clone https://github.com/keesiemeijer/wp-update.git
 # 
 # 2 Edit and point the DOMAINS_PATH variable (below this section) to a 
 #   parent directory with WP sites in it.  
@@ -44,11 +45,10 @@
 # 3 Upload this file to your server and log in with ssh.
 # 
 # 4 Go to where you uploaded it and make this file executable
-# chmod +x wp-update
+# chmod +x wp-update.sh
 # 
-# 5 Move it in your path like you did with WP-CLI (e.g /usr/local/bin/).
-#   If you have permission issues when moving it in your Path see: https://stackoverflow.com/a/14650235
-# mv wp-update /usr/local/bin/wp-update
+# 5 Move it in your `PATH` (e.g /usr/local/bin/) and rename it to `wp-update`.
+# mv wp-update.sh /usr/local/bin/wp-update
 # 
 # Now you can use the `wp-update` command to update your sites.
 # test it out by using "wp-update --help"
@@ -166,21 +166,23 @@ function maybe_do_database_backup(){
 function make_database_backup(){
 	local prefix=$1
 
-	if is_file "${prefix}_update_${WEBSITE}.sql"; then
+	if is_file "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql"; then
 		printf "Removing a previous database backup file...\n"
-		rm "${prefix}_update_${WEBSITE}.sql"
+		rm "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql"
 	fi
 
 	printf "Creating a backup of the %s database ${prefix} updating...\n" "$WEBSITE"
 	wp db export "${prefix}_update_${WEBSITE}.sql" --path="$SITE_PATH" --allow-root
 
-	if ! is_file "${prefix}_update_${WEBSITE}.sql"; then
-		printf "\e[31mWarning: No database backup file found in: %s\033[0m\n" "$SITE_PATH"
+	mv "${prefix}_update_${WEBSITE}.sql" "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql"
+
+	if ! is_file "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql"; then
+		printf "\e[31mWarning: No database backup file found in: %s\033[0m\n" "$BACKUP_PATH"
 		return 1
 	fi
 
-	if ! [[ -s "${prefix}_update_${WEBSITE}.sql" ]]; then
-		printf "\e[31mWarning: database backup file is empty in: %s\033[0m\n" "$SITE_PATH"
+	if ! [[ -s "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql" ]]; then
+		printf "\e[31mWarning: database backup file is empty in: %s\033[0m\n" "$BACKUP_PATH"
 		return 1
 	fi
 
@@ -191,7 +193,7 @@ function make_database_backup(){
 
 function wp_core_is_installed(){
 	# Check for wp-config.php file
-	if ! is_file "wp-config.php"; then
+	if ! is_file "$SITE_PATH/wp-config.php"; then
 		return 1
 	fi
 
@@ -268,21 +270,21 @@ function update_asset(){
 
 		read -p "Do you want to update all ${asset_type}s [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
-			printf "Stopped updating %s\n" "$asset_type"
+			printf "Stopped updating %ss\n" "$asset_type"
 			return 1
 		fi
 	fi
 
 	printf "backing up %ss\n" "$asset_type"
-	if is_dir "wp-update-$asset_path-backup"; then
-		rm -rf "wp-update-$asset_path-backup"
+	if is_dir "$BACKUP_PATH/${asset_type}s-backup"; then
+		rm -rf "$BACKUP_PATH/${asset_type}s-backup"
 	fi
 
 	if is_dir "$asset_path"; then
-		cp -r "$asset_path" "wp-update-$asset_path-backup"
+		cp -r "$asset_path" "$BACKUP_PATH/${asset_type}s-backup"
 	else
 		printf "Could not find %ss path\n" "$asset_type"
-		return 0
+		return 1
 	fi
 
 	maybe_do_database_backup
@@ -369,7 +371,7 @@ while test $# -gt 0; do
 	fi
 done
 
-# Check if options is empty or if option `all` is used.
+# Check if options is empty or if option `all` is used 
 if [[ ${#ALLOPTIONS[@]} -eq 0 || ${OPTIONS["all"]} ]]; then
 	ALLOPTIONS=("all")
 	UPDATE_TRANSLATIONS=true
@@ -380,11 +382,11 @@ fi
 # =============================================================================
 
 if [ -z "$DOMAINS_PATH" ]; then
-	printf "Please provide a valid domains directory in the wp-update file\n"
+	printf "Please provide a valid domains directory path in the wp-update.sh file\n"
 	exit 1
 fi
 
-SITE_PATH="$DOMAINS_PATH/$WEBSITE"
+readonly SITE_PATH="$DOMAINS_PATH/$WEBSITE"
 
 if ! is_dir "$SITE_PATH"; then
 	printf "Could not find Website directory: %s\n" "$WEBSITE"
@@ -392,6 +394,18 @@ if ! is_dir "$SITE_PATH"; then
 fi
 
 cd "$SITE_PATH" || exit
+
+readonly BACKUP_PATH="$SITE_PATH/wp-update-backups"
+mkdir -p "$BACKUP_PATH"
+
+if ! is_dir "$BACKUP_PATH"; then
+	printf "Backup directory %s not found...\n" "$BACKUP_PATH"
+	exit 1
+fi
+
+if ! is_file "$BACKUP_PATH/index.php"; then
+	echo -e "<?php\n// Silence is golden." > "$BACKUP_PATH/index.php"
+fi
 
 if ! wp_core_is_installed; then
 	printf "No WordPress website found in: %s\n" "$SITE_PATH"

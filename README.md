@@ -25,13 +25,13 @@ If you have permission issues or have trouble moving files in your `PATH` see [t
 git clone https://github.com/keesiemeijer/wp-update.git
 ```
 
-2 Edit the `DOMAINS_PATH` variable in the wp-update file and point it to a parent directory with WP sites in it.
+2 Edit the `DOMAINS_PATH` variable in the `wp-update.sh` file and point it to a parent directory with WP sites in it.
 
 ```bash
 readonly DOMAINS_PATH="$HOME/domains"
 ```
 
-This variable points to the parent dirictory of your WP site(s).
+This variable needs to point to the parent dirictory of your WP site(s).
 Example:
 
 ```
@@ -42,18 +42,18 @@ domains <- point it here
         └── WP files
 ```
 
-3 Upload this file to your server and log in with SSH.
+3 Upload the `wp-update.sh` file to your server and log in with SSH.
 
-4 Go to where you uploaded it and make the wp-update file executable.
+4 Go to where you uploaded it and make the `wp-update.sh` file executable.
 
 ```bash
-chmod +x wp-update
+chmod +x wp-update.sh
 ```
 
-5 Move it in your `PATH` (e.g /usr/local/bin/). 
+5 Move it in your `PATH` (e.g /usr/local/bin/) and rename it to `wp-update`.
 
 ```bash
-mv wp-update /usr/local/bin/wp-update
+mv wp-update.sh /usr/local/bin/wp-update
 ```
 If the WP Update script was installed successfully, you should see something like this when you run `wp-update --help`
 
@@ -109,11 +109,6 @@ wp-update <site-directory> --all
 
 ## Backups
 
-Backups are only created when something is updated. Newer backups replace previous backups as not to clutter your website.
-
-Database backups are created before and after updating. They are saved in the root directory of your website.
+Backups are only created when something is updated. Newer backups replace previous backups as not to clutter your website. The `plugins` and `themes` folder backups are made before updating plugins or themes. Database backups are created before and after updating. All backups are saved in the `wp-update-backups` directory in the root of the website.
 
 **Note**: Test the database backups made by this script before you rely on this feature.
-
-Plugin and theme folder backups are made before updating plugins or themes. They are saved in the `wp-content` folder of your website as `themes-backup` and `plugins-backup`
-
