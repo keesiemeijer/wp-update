@@ -55,8 +55,9 @@
 # ============================================================================
 
 # Edit this variable to point to a directory with WordPress directories in it (see above)
-#readonly DOMAINS_PATH="$HOME/domains"
-readonly DOMAINS_PATH="/app"
+
+readonly DOMAINS_PATH="$HOME/domains"
+
 
 # =============================================================================
 # USAGE
