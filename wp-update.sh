@@ -5,6 +5,9 @@
 # 
 # A bash script to update WordPress core, plugins, themes and comments via SSH.
 # 
+# Author: keesiemeijer
+# Github: https://github.com/keesiemeijer/wp-update
+# 
 # Features:
 #     All updates are displayed before updating
 #     Interactive prompts keeps you in control of what gets updated
@@ -19,8 +22,7 @@
 #     WP-CLI
 #     SSH access to the server.
 #     
-# Install WP-CLI if not installed. The command `wp` should be 
-# executable and in your PATH (e.g. /usr/local/bin/).
+# The command `wp` should be executable and in your PATH (e.g. /usr/local/bin/).
 # See the installation instructions for WP-CLI: http://wp-cli.org/#installing
 # 
 # If you have permission issues or have trouble moving files in your `PATH` 
@@ -30,108 +32,57 @@
 # =============================================================================
 # INSTALLATION
 # 
-# 1 Clone this repository
-# git clone https://github.com/keesiemeijer/wp-update.git
+# 1 log in your server via SSH and download the `wp-update.sh` file.
+# curl -o wp-update.sh https://raw.githubusercontent.com/keesiemeijer/wp-update/master/wp-update.sh
 # 
-# 2 Edit and point the DOMAINS_PATH variable (below this section) to a 
-#   parent directory with WP sites in it.  
-#   Example:
-#       domains <- point it here 
-#         ├── wp-site1 (directory)
-#         │     └── WP files
-#         └── wp-site2 (directory)
-#               └── WP files
-# 
-# 3 Upload this file to your server and log in with ssh.
-# 
-# 4 Go to where you uploaded it and make this file executable
+# 2 Make the `wp-update.sh` file executable.
 # chmod +x wp-update.sh
 # 
-# 5 Move it in your `PATH` (e.g /usr/local/bin/) and rename it to `wp-update`.
+# 3 Move it in your `PATH` (e.g /usr/local/bin/) and rename it to `wp-update`.
 # mv wp-update.sh /usr/local/bin/wp-update
 # 
-# Now you can use the `wp-update` command to update your sites.
-# test it out by using "wp-update --help"
+# 4 Use "wp-update --help" to see if the this script was installed successfully.
 # ============================================================================
-
-# Edit this variable to point to a directory with WordPress directories in it (see above)
-
-readonly DOMAINS_PATH="$HOME/domains"
-
 
 # =============================================================================
 # USAGE
 # 
-#     wp-update <site-directory> [option...]
+#     wp-update <path/to/website> [option...]
 # 
-# Use the site directory name for a WordPress site 
+# Relative or full path to a WordPress Site
 # Use "wp-update --help" to see what options are available
 # 
-# Without options the plugins and themes are updated. Example:
+# Without options everything is updated. Example:
 # 
-#     wp-update <site-directory>
+#     wp-update <path/to/website>
 # 
-# The same example, but with options used:
+# Example to update plugins and themes only:
 #    
-#    wp-update <site-directory> --plugins --themes
+#    wp-update <path/to/website> --plugins --themes
 # 
-# Example to update everything
-# 
-#     wp-update <site-directory> --all
-# 
+# **Note**: Check your website if your site was updated!
 # =============================================================================
 
 # =============================================================================
 # BACKUPS
 # 
 # Backups are only created when something is updated.
-# 
+# Newer backups replace previous backups as to not clutter your website.
+# The `plugins` and `themes` folder backups are created before updating plugins or themes.
 # Database backups are created before and after updating.
-# They are saved in the root directory of your website.
-# Test the backups that are made by this script before you rely on this feature.
+# The backup directory `wp-update-backups` is saved in the parent directory of the site directory
 # 
-# Plugin and theme folder backups are made before updating plugins or themes.
-# They are saved in the wp-content folder of your website
+# **Note**: If the backup directory is publicly accessible you'll need to
+#           password protect it in your htaccess file or use a special config file.
+#           See the documentation.
 # 
-# Newer backups replace previous backups as not to clutter your website.
+# **Note**: Test the database backups made by this script before you rely on this feature.
 # =============================================================================
 
+set -e
 
-
-# Start of WP Update script
-
-if [ $# -lt 1 ]; then
-		printf "\nUsage: %s <website-directory> [option...]\n" "$0"
-		printf "Example: wp-update my-website --plugins\n\n"
-		printf "Use \"wp-update --help\" to see all options\n"
-		exit 1
-fi
-
-# =============================================================================
-# Variables
-# =============================================================================
-
-# Website directory
-readonly WEBSITE=$1
-
-# Does a database backup already exist.
-DATABASE_BACKUP=false
-
-# Do translations need updating (after updating core, plugins or themes).
-UPDATE_TRANSLATIONS=false
-
-# Use a prompt before updating plugins, themes and comments.
-USE_PROMPT=true
-
-# Associative array to check CLI option
-declare -A OPTIONS
-
-# All unique CLI argument options in the right order 
-ALLOPTIONS=()
-
-# =============================================================================
 # Functions
-# =============================================================================
+
 function is_file() {
 	local file=$1
 	[[ -f $file ]]
@@ -166,23 +117,29 @@ function maybe_do_database_backup(){
 
 function make_database_backup(){
 	local prefix=$1
+	local db_name=$(wp config get --constant=DB_NAME --path="$CURRENT_PATH" --allow-root)
+	local db_date=$(date +"%Y-%m-%d")
+	local db_file="wp-update-${prefix}-${db_date}.sql"
 
-	if is_file "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql"; then
-		printf "Removing a previous database backup file...\n"
-		rm "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql"
-	fi
+	for f in "$BACKUP_PATH/wp-update-${prefix}-"*.sql; do
+		if is_file "$f"; then
+			printf "Removing a previous database backup file...\n"
+			rm "$f"
+		fi
+		break
+	done
 
-	printf "Creating a backup of the %s database ${prefix} updating...\n" "$WEBSITE"
-	wp db export "${prefix}_update_${WEBSITE}.sql" --path="$SITE_PATH" --allow-root
+	printf "Creating a backup of the %s database %s updating...\n" "$db_name" "$prefix"
+	wp db export "$db_file" --path="$CURRENT_PATH" --allow-root
 
-	mv "${prefix}_update_${WEBSITE}.sql" "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql"
+	mv "$db_file" "$BACKUP_PATH/$db_file"
 
-	if ! is_file "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql"; then
+	if ! is_file "$BACKUP_PATH/$db_file"; then
 		printf "\e[31mWarning: No database backup file found in: %s\033[0m\n" "$BACKUP_PATH"
 		return 1
 	fi
 
-	if ! [[ -s "$BACKUP_PATH/${prefix}_update_${WEBSITE}.sql" ]]; then
+	if ! [[ -s "$BACKUP_PATH/$db_file" ]]; then
 		printf "\e[31mWarning: database backup file is empty in: %s\033[0m\n" "$BACKUP_PATH"
 		return 1
 	fi
@@ -192,19 +149,9 @@ function make_database_backup(){
 	return 0
 }
 
-function wp_core_is_installed(){
-	# Check for wp-config.php file
-	if ! is_file "$SITE_PATH/wp-config.php"; then
-		return 1
-	fi
-
-	# Check if WP tables exist
-	wp core is-installed --path="$SITE_PATH" --allow-root 2> /dev/null
-}
-
 function update_wp_core(){
 	printf "Checking WordPress version...\n"
-	update=$(wp core check-update --field=version --format=count --path="$SITE_PATH" --allow-root)
+	update=$(wp core check-update --field=version --format=count --path="$CURRENT_PATH" --allow-root)
 	if [[ -z $update ]]; then
 		printf "WordPress is at the latest version\n"
 		return 0
@@ -230,15 +177,15 @@ function update_wp_core(){
 function update_language(){
 	printf "Checking translations...\n"
 
-	update=$(wp core language list --update=available --format=count --path="$SITE_PATH" --allow-root)
-	if [[ $update = 0 ]]; then
+	update=$(wp core language list --update=available --format=csv --field=language --path="$CURRENT_PATH" --allow-root)
+	if [[ -z $update ]]; then
 		printf "No language updates available\n"
 		return 0
 	fi
 
 	printf "New translations available.\n"
 	if [[ "$USE_PROMPT" = true ]]; then
-		wp core language list --update=available --path="$SITE_PATH" --allow-root
+		wp core language list --update=available --path="$CURRENT_PATH" --allow-root
 		read -p "Do you want to update translations? [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
 			printf "Stopped updating translations\n"
@@ -249,16 +196,16 @@ function update_language(){
 	maybe_do_database_backup
 
 	printf "Updating translations\n"
-	wp core language update --path="$SITE_PATH" --allow-root
+	wp core language update --path="$CURRENT_PATH" --allow-root
 }
 
 function update_asset(){
 	local asset_type=$1
-	local asset_path=$(wp "$asset_type" path --path="$SITE_PATH" --allow-root)
+	local asset_path=$(wp "$asset_type" path --path="$CURRENT_PATH" --allow-root)
 	local update
 
 	printf "Checking %s updates...\n" "$asset_type"
-	update=$(wp "$asset_type" list --update=available --number=1 --format=count --path="$SITE_PATH" --allow-root)
+	update=$(wp "$asset_type" list --update=available --number=1 --format=count --path="$CURRENT_PATH" --allow-root)
 	if [[ $update = 0 ]]; then
 		printf "No %s updates available\n" "$asset_type"
 		return 0
@@ -267,7 +214,7 @@ function update_asset(){
 	printf "Updating %ss\n" "$asset_type"
 
 	if [[ "$USE_PROMPT" = true ]]; then
-		wp "$asset_type" update --all --dry-run --path="$SITE_PATH" --allow-root
+		wp "$asset_type" update --all --dry-run --path="$CURRENT_PATH" --allow-root
 
 		read -p "Do you want to update all ${asset_type}s [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
@@ -291,7 +238,7 @@ function update_asset(){
 	maybe_do_database_backup
 
 	printf "Updating %ss\n" "$asset_type"
-	wp "$asset_type" update --all --path="$SITE_PATH" --allow-root
+	wp "$asset_type" update --all --path="$CURRENT_PATH" --allow-root
 	UPDATE_TRANSLATIONS=true
 
 	return 0
@@ -302,14 +249,14 @@ function update_comments() {
 
 	printf "Checking %s comments...\n" "$status"
 
-	count=$(wp comment list --number=1 --status="$status" --format=count --path="$SITE_PATH" --allow-root)
+	count=$(wp comment list --number=1 --status="$status" --format=count --path="$CURRENT_PATH" --allow-root)
 	if [[ $count = 0 ]]; then
 		printf "No %s comments found\n" "$status"
 		return 0
 	fi
 
 	if [[ "$USE_PROMPT" = true ]]; then
-		wp comment list --status="$status" --fields=ID,comment_author,comment_author_email,comment_approved,comment_content --path="$SITE_PATH" --allow-root
+		wp comment list --status="$status" --fields=ID,comment_author,comment_author_email,comment_approved,comment_content --path="$CURRENT_PATH" --allow-root
 		read -p "Do you want to delete all ${status} comments [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
 			printf "Stopped deleting %s comments\n" "$status"
@@ -320,27 +267,54 @@ function update_comments() {
 	maybe_do_database_backup
 
 	printf "Deleting %s comments\n" "$status"
-	wp comment delete $(wp comment list --status="$status" --format=ids --path="$SITE_PATH" --allow-root) --path="$SITE_PATH" --allow-root
+	wp comment delete $(wp comment list --status="$status" --format=ids --path="$CURRENT_PATH" --allow-root) --path="$CURRENT_PATH" --allow-root
 	
 	return 0
 }
 
 # =============================================================================
+# Variables
+# =============================================================================
+
+# Does a database backup already exist.
+DATABASE_BACKUP=false
+
+# Do translations need updating (after updating core, plugins or themes).
+UPDATE_TRANSLATIONS=false
+
+# Use a prompt before updating plugins, themes and comments.
+USE_PROMPT=true
+
+# Associative array to check CLI option
+declare -A OPTIONS
+
+# All unique CLI argument options in the right order
+ALLOPTIONS=()
+
+# Command arguments found
+ARGUMENT_COUNT=0
+
+# Notice
+NOTICE=''
+
+# =============================================================================
 # Options
 # =============================================================================
 
-while test $# -gt 0; do
-	
-	if ! [[ "$1" =~ ^- ]]; then
-		# Not starting with a dash (not an option).
-		shift
+for arg in "$@"
+do
+	if ! [[ "$arg" =~ ^- ]]; then
+		ARGUMENT_COUNT=$((ARGUMENT_COUNT + 1))
+		if [[ "$ARGUMENT_COUNT" = 1 ]]; then
+			readonly SITE_PATH=$arg;
+		fi
 	else
-		case "$1" in
+		case "$arg" in
 			-h|--help)
 				printf "\nwp-update usage:\n"
-				printf "\twp-update <website-directory> [option...]\n\n"
+				printf "\twp-update <path/to/website> [option...]\n\n"
 				printf "wp-update example:\n"
-				printf "\twp-update my-website --plugins\n\n"
+				printf "\twp-update domains/my-website --plugins\n\n"
 				printf "Options controlling update type:\n"
 				printf -- "\t-w, --core           Update WordPress core\n"
 				printf -- "\t-p, --plugins        Update plugins\n"
@@ -368,48 +342,93 @@ while test $# -gt 0; do
 				exit 1
 				;;
 		esac
-		shift
 	fi
 done
 
-# Check if options is empty or if option `all` is used 
+# Check if no options were used or if option `all` is used.
 if [[ ${#ALLOPTIONS[@]} -eq 0 || ${OPTIONS["all"]} ]]; then
 	ALLOPTIONS=("all")
+	OPTIONS["all"]=1
 	UPDATE_TRANSLATIONS=true
 fi
- 
+
 # =============================================================================
 # Start updates
 # =============================================================================
 
-if [ -z "$DOMAINS_PATH" ]; then
-	printf "Please provide a valid domains directory path in the wp-update.sh file\n"
+if [[ $ARGUMENT_COUNT -lt 1 || -z "$SITE_PATH" ]]; then
+	printf "\nUsage: %s <path/to/website> [option...]\n" "$0"
+	printf "Example: wp-update domains/my-website --plugins\n\n"
+	printf "Use \"wp-update --help\" to see all options\n"
 	exit 1
 fi
-
-readonly SITE_PATH="$DOMAINS_PATH/$WEBSITE"
 
 if ! is_dir "$SITE_PATH"; then
-	printf "Could not find Website directory: %s\n" "$WEBSITE"
+	printf "Could not find Website directory: %s\n" "$SITE_PATH"
 	exit 1
 fi
 
+# Go to the website directory.
 cd "$SITE_PATH" || exit
 
-readonly BACKUP_PATH="$SITE_PATH/wp-update-backups"
-mkdir -p "$BACKUP_PATH"
+# Set the website directory to a full path.
+readonly CURRENT_PATH=$(pwd)
 
-if ! is_dir "$BACKUP_PATH"; then
-	printf "Backup directory %s not found...\n" "$BACKUP_PATH"
+# Check if there is a config-file
+if is_file "wp-update-config.txt"; then
+
+	printf "Config file wp-update-config.txt detected\n"
+
+	# Check if it's readable
+	if ! [[ -r "wp-update-config.txt" ]]; then
+		printf "Config file wp-update-config.txt not readable\n"
+		exit 1
+	fi
+
+	# Read the variables
+	while read -r line || [ -n "$line" ]; do
+		case $line in
+			BACKUP_PATH=*)
+				readonly CONFIG_BACKUP_PATH="${line/BACKUP_PATH=/}"
+				printf "Setting custom backup directory to: %s\n" "$CONFIG_BACKUP_PATH"
+			;;
+		esac
+	done < wp-update-config.txt
+fi
+
+# Check if WordPress is installed.
+if ! wp core is-installed --path="$CURRENT_PATH" --allow-root 2> /dev/null; then
+	printf "No WordPress website found in: %s\n" "$CURRENT_PATH"
 	exit 1
 fi
 
-if ! is_file "$BACKUP_PATH/index.php"; then
-	echo -e "<?php\n// Silence is golden." > "$BACKUP_PATH/index.php"
+# Set the backup directory path.
+if [[ -n "$CONFIG_BACKUP_PATH" ]]; then
+	readonly BACKUP_PATH="${CONFIG_BACKUP_PATH%/}"
+	NOTICE="$NOTICE Check the wp-update-config.txt config file\n"
+else
+	readonly PARENT_PATH="$(dirname "$CURRENT_PATH")"
+	readonly CURRENT_DIR="${PWD##*/}"
+
+	if ! is_dir "$PARENT_PATH"; then
+		printf "Cannot find parent directory of path: %s\n" "$PARENT_PATH"
+		exit 1
+	fi
+
+	readonly BACKUP_PATH="${PARENT_PATH%/}/wp-update-backups/$CURRENT_DIR"
+	mkdir -p "$BACKUP_PATH"
 fi
 
-if ! wp_core_is_installed; then
-	printf "No WordPress website found in: %s\n" "$SITE_PATH"
+# Check if backup path exists.
+if ! is_dir "$BACKUP_PATH"; then
+	printf "Backup directory %s does not exist\n" "$BACKUP_PATH"
+	printf "$NOTICE"
+	exit 1
+fi
+
+if ! [[ -w "$BACKUP_PATH" ]]; then
+	printf "Cannot write to backup directory %s\n" "$BACKUP_PATH"
+	printf "$NOTICE"
 	exit 1
 fi
 
@@ -425,6 +444,7 @@ if [[ ${OPTIONS["all"]} || ${OPTIONS[plugins]} || ${OPTIONS["themes"]} || ${OPTI
 	fi
 fi
 
+# Update everything except translations.
 for type in "${ALLOPTIONS[@]}"
 do  
 	case "$type" in
@@ -465,6 +485,7 @@ else
 	fi
 fi
 
+# Create database after updates
 if [[ "$DATABASE_BACKUP" = true ]]; then
 	if ! make_database_backup "after"; then
 		printf "Creating a database backup after updating failed"
