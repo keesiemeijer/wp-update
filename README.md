@@ -8,7 +8,7 @@ Features:
 * Interactive prompts keeps you in control of what gets updated
 * Database and file backups (plugins, themes) are created when updates are made
 * Manage spam and trash comments
-* Set a custom backup directory in a config file
+* Use a custom backup directory location
 
 ## requirements:
 
@@ -70,24 +70,20 @@ wp-update <path/to/website> [option...]
 
 Use `wp-update --help` to see what options are available. (see above)
 
-Without options the plugins and themes are updated by default.
+Without options the option `--all` is used.
 Example:
 
 ```
 wp-update <path/to/website>
 ```
 
-The same example, but with options used:
+Example to update plugins and themes only:
 
 ```
 wp-update <path/to/website> --plugins --themes
 ```
 
-Example to update everything
-
-```
-wp-update <path/to/website> --all
-```
+**Note**: Check your website if your site was updated!
 
 ## Backups
 
@@ -96,13 +92,15 @@ Backups are only created when something is updated. Newer backups replace previo
 **Note**: Test the database backups made by this script before you rely on this feature.
 ## Backup Directory
 
-The backup directory should not be publicly accessible. That's why backups are saved outside the website path you used in `<path/to/website>`. The backup directory `wp-update-backups` is saved in the parent directory of the website path used.
+The backup directory should not be publicly accessible. That's why backups are saved outside the website path you used provide `<path/to/website>`. The backup directory `wp-update-backups` is saved in the parent directory of the path used.
 
-For example, if you used this command `wp-update /domains/my-site/src --plugins`.
+For example, if you used this command 
+```
+wp-update /domains/my-site/public
+```
 The backup directory is created at `/domains/my-site/wp-update-backups`.
-In most cases the directory will not be publicly accessible anymore.
 
-If you have permission issues or if it's still publicly accessible you can set a custom backup directory location in the config file (see below).
+In most cases the directory will not be publicly accessible anymore. If you have permission issues or if it's still publicly accessible you can set a custom backup directory location in the config file (see below).
 
 ## Config file
 This script reads the `wp-update-config.txt` file in the root of your site if it exists. Here you can set custom variables used by this script
@@ -110,7 +108,7 @@ This script reads the `wp-update-config.txt` file in the root of your site if it
 ### BACKUP_PATH
 Use this variable in the `wp-update-config.txt` to set a custom backup directory path. It's recommended this directory is not publicly accessible. This directory must exist on your server for the path to be used.
 
-example `wp-update-config.txt` config file
+Example of the `wp-update-config.txt` config file.
 ```
 BACKUP_PATH=/app/backups
 ```

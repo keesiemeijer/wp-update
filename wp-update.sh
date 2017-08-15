@@ -52,7 +52,7 @@
 # Relative or full path to a WordPress Site
 # Use "wp-update --help" to see what options are available
 # 
-# Without options everything is updated. Example:
+# Without options the option `--all` is used. Example:
 # 
 #     wp-update <path/to/website>
 # 
@@ -76,7 +76,7 @@
 # See the documentation
 # 
 # **Note**: The backup directory should not be publicly accessible. 
-#           If it's publicly accessible you can set a custom backup directory location in a config file.
+#           If it's publicly accessible you can  set a custom backup directory location in a config file.
 #           See the documentation.
 # 
 # **Note**: Test the database backups made by this script before you rely on this feature.
