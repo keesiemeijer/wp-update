@@ -100,8 +100,9 @@ The backup directory should not be publicly accessible. That's why backups are s
 
 For example, if you used this command `wp-update /domains/my-site/src --plugins`.
 The backup directory is created at `/domains/my-site/wp-update-backups`.
+In most cases the directory will not be publicly accessible anymore.
 
-In most cases the directory will not be publicly accessible anymore. However, if it's still publicly accessible you can password protect it in your `htaccess` or use a custom backups directory path in the config file.
+If you have permission issues or if it's still publicly accessible you can set a custom backup directory location in the config file (see below).
 
 ## Config file
 This script reads the `wp-update-config.txt` file in the root of your site if it exists. Here you can set custom variables used by this script

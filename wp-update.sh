@@ -72,8 +72,11 @@
 # Database backups are created before and after updating.
 # The backup directory `wp-update-backups` is saved in the parent directory of the site directory
 # 
-# **Note**: If the backup directory is publicly accessible you'll need to
-#           password protect it in your htaccess file or use a special config file.
+# If you have permission issues you can set a custom backup directory in a config file.
+# See the documentation
+# 
+# **Note**: The backup directory should not be publicly accessible. 
+#           If it's publicly accessible you can set a custom backup directory location in a config file.
 #           See the documentation.
 # 
 # **Note**: Test the database backups made by this script before you rely on this feature.
