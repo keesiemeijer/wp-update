@@ -10,6 +10,8 @@ Features:
 * Manage spam and trash comments
 * Use a custom backup directory location
 
+![screencast-wp-update](https://user-images.githubusercontent.com/1436618/29370677-65765436-82a6-11e7-99f7-3470910b3027.gif)
+
 ## requirements:
 
 * [WP-CLI](http://wp-cli.org/) (1.3.0 or higher)
