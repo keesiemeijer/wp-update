@@ -47,40 +47,45 @@ wp-update <path/to/website> [option...]
 
 Use a relative or full path to the WP site you want to update.
 
-[available options](https://github.com/keesiemeijer/wp-update/wiki/Options)
+See [all available options](https://github.com/keesiemeijer/wp-update/wiki/Options)
 
 Without options everything is updated.
 Example:
 
 ```
-wp-update <path/to/website>
+wp-update path/to/my/website
 ```
 
 Example to update plugins and themes only:
 
 ```
-wp-update <path/to/website> --plugins --themes
+wp-update path/to/my/website --plugins --themes
 ```
 
 **Note**: After updating it's recommended you inspect your website.
 
 ## Backups
 
-Backups are only created when something is updated. Newer backups replace previous backups as not to clutter your website. The `plugins` and `themes` folder backups are made before updating plugins or themes. Database backups are created before and after updating.
+Backups are only created when something is updated. Newer backups replace previous backups as not to clutter your website. 
+
+* The `plugins` and `themes` folder backups are made before updating plugins or themes.
+* Database backups are created before and after updating.
 
 **Note**: Test the database backups made by this script before you rely on this feature.
 
 ## Backup Directory
 
-The backup directory should ***not*** be publicly accessible. That's why backups are saved outside the website path you provide in `<path/to/website>`. The backup directory called `wp-update-backups` is saved in the parent directory of the path provided.
+The backup directory ***should not be publicly accessible***. That's why backups are saved outside the website path you provide in `<path/to/website>`. In most cases this will fix the public access issue.
 
-For example, if you used this command 
-```
-wp-update /domains/my-site/public
-```
-The backup directory is created at `/domains/my-site/wp-update-backups`.
+Before updating a backup directory called `wp-update-backups` is created if it doesn't exist yet. 
 
-In most cases this will fix the public access issue. Use a custom backup location if you have permission issues or if it's still publicly accessible. You can set a custom backup directory location in a config file (see below).
+For example, if you've used this command:
+```
+wp-update domains/my-site
+```
+The backup directory is created at `domains/wp-update-backups`.
+
+You can set a custom backup directory location for a site in the [config file](https://github.com/keesiemeijer/wp-update#config-file). Set it there if there are permission issues or if the location is still publicly accessible.
 
 ## Config file
 
@@ -91,5 +96,5 @@ Use this config variable to set a custom backup directory path. It's recommended
 
 Example of the `wp-update-config.txt` config file.
 ```
-BACKUP_PATH=/app/backups
+BACKUP_PATH=/custom/path/to/backups
 ```
