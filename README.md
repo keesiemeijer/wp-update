@@ -14,9 +14,9 @@ Features:
 
 * [WP-CLI](http://wp-cli.org/) (1.3.0 or higher)
 
-If it's not installed see the [WP-CLI installation instructions](http://wp-cli.org/#installing). The command `wp` should be executable and in your `PATH` (e.g. /usr/local/bin/).
+See the [WP-CLI installation instructions](http://wp-cli.org/#installing) if it's not installed . The command `wp` should be executable and in your PATH (e.g. /usr/local/bin/).
 
-If you have permission issues or have trouble moving files in your `PATH` see [this answer](https://stackoverflow.com/a/14650235) on stackoverflow.
+If you have permission issues or have trouble moving files in your PATH see [this answer](https://stackoverflow.com/a/14650235) on stackoverflow.
 
 ## Installation
 
@@ -32,7 +32,7 @@ curl -o wp-update.sh https://raw.githubusercontent.com/keesiemeijer/wp-update/ma
 chmod +x wp-update.sh
 ```
 
-3 Move it in your `PATH` (e.g /usr/local/bin/) and rename it to `wp-update`.
+3 Move it in your PATH (e.g /usr/local/bin/) and rename it to `wp-update`.
 
 ```bash
 mv wp-update.sh /usr/local/bin/wp-update
