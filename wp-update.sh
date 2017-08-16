@@ -107,15 +107,10 @@ function add_type_option(){
 
 function maybe_do_database_backup(){
 	if [[ "$DATABASE_BACKUP" = true || "$DATABASE_BACKUP" = 'none' ]]; then
-		return 1
+		return 0
 	fi
 
-	if ! make_database_backup "before"; then
-		printf "Creating a database backup before updating failed"
-		exit 1
-	fi
-
-	return 0
+	make_database_backup "before"
 }
 
 function make_database_backup(){
@@ -138,18 +133,16 @@ function make_database_backup(){
 	mv "$db_file" "$BACKUP_PATH/$db_file"
 
 	if ! is_file "$BACKUP_PATH/$db_file"; then
-		printf "\e[31mWarning: No database backup file found in: %s\033[0m\n" "$BACKUP_PATH"
-		return 1
+		printf "Failed to create a database backup file in: %s\n" "$BACKUP_PATH"
+		exit 1
 	fi
 
 	if ! [[ -s "$BACKUP_PATH/$db_file" ]]; then
-		printf "\e[31mWarning: database backup file is empty in: %s\033[0m\n" "$BACKUP_PATH"
-		return 1
+		printf "\Database backup file is empty in: %s\n" "$BACKUP_PATH"
+		exit 1
 	fi
 
 	DATABASE_BACKUP=true
-
-	return 0
 }
 
 function update_wp_core(){
@@ -165,7 +158,7 @@ function update_wp_core(){
 		read -p "Do you want to update WordPress [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
 			printf "Stopped updating WordPress core\n"
-			return 1
+			return 0
 		fi
 	fi
 
@@ -192,7 +185,7 @@ function update_language(){
 		read -p "Do you want to update translations? [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
 			printf "Stopped updating translations\n"
-			return 1
+			return 0
 		fi
 	fi
 
@@ -222,7 +215,7 @@ function update_asset(){
 		read -p "Do you want to update all ${asset_type}s [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
 			printf "Stopped updating %ss\n" "$asset_type"
-			return 1
+			return 0
 		fi
 	fi
 
@@ -234,17 +227,16 @@ function update_asset(){
 	if is_dir "$asset_path"; then
 		cp -r "$asset_path" "$BACKUP_PATH/${asset_type}s-backup"
 	else
-		printf "Could not find %ss path\n" "$asset_type"
-		return 1
+		printf "Could not find %ss path: %s\n" "$asset_type" "$asset_path"
+		exit 1
 	fi
 
 	maybe_do_database_backup
 
 	printf "Updating %ss\n" "$asset_type"
 	wp "$asset_type" update --all --path="$CURRENT_PATH" --allow-root
-	UPDATE_TRANSLATIONS=true
 
-	return 0
+	UPDATE_TRANSLATIONS=true
 }
 
 function update_comments() {
@@ -263,7 +255,7 @@ function update_comments() {
 		read -p "Do you want to delete all ${status} comments [y/n]" -r
 		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
 			printf "Stopped deleting %s comments\n" "$status"
-			return 1
+			return 0
 		fi
 	fi
 
@@ -271,8 +263,6 @@ function update_comments() {
 
 	printf "Deleting %s comments\n" "$status"
 	wp comment delete $(wp comment list --status="$status" --format=ids --path="$CURRENT_PATH" --allow-root) --path="$CURRENT_PATH" --allow-root
-	
-	return 0
 }
 
 # =============================================================================
@@ -297,8 +287,8 @@ ALLOPTIONS=()
 # Command arguments found
 ARGUMENT_COUNT=0
 
-# Notice
-NOTICE=''
+# Config error messages
+CONFIG_ERROR=''
 
 # =============================================================================
 # Options
@@ -382,9 +372,9 @@ if is_file "wp-update-config.txt"; then
 
 	printf "Config file wp-update-config.txt detected\n"
 
-	# Check if it's readable
+	# Check if it's readable.
 	if ! [[ -r "wp-update-config.txt" ]]; then
-		printf "Config file wp-update-config.txt not readable\n"
+		printf "Config file wp-update-config.txt is not readable\n"
 		exit 1
 	fi
 
@@ -408,13 +398,13 @@ fi
 # Set the backup directory path.
 if [[ -n "$CONFIG_BACKUP_PATH" ]]; then
 	readonly BACKUP_PATH="${CONFIG_BACKUP_PATH%/}"
-	NOTICE="$NOTICE Check the wp-update-config.txt config file\n"
+	CONFIG_ERROR="The backup path is set in the wp-update-config.txt config file\n"
 else
 	readonly PARENT_PATH="$(dirname "$CURRENT_PATH")"
 	readonly CURRENT_DIR="${PWD##*/}"
 
 	if ! is_dir "$PARENT_PATH"; then
-		printf "Cannot find parent directory of path: %s\n" "$PARENT_PATH"
+		printf "Parent directory doesn't exist: %s\n" "$PARENT_PATH"
 		exit 1
 	fi
 
@@ -425,13 +415,13 @@ fi
 # Check if backup path exists.
 if ! is_dir "$BACKUP_PATH"; then
 	printf "Backup directory %s does not exist\n" "$BACKUP_PATH"
-	printf "$NOTICE"
+	printf "$CONFIG_ERROR"
 	exit 1
 fi
 
 if ! [[ -w "$BACKUP_PATH" ]]; then
 	printf "Cannot write to backup directory %s\n" "$BACKUP_PATH"
-	printf "$NOTICE"
+	printf "$CONFIG_ERROR"
 	exit 1
 fi
 
@@ -490,10 +480,7 @@ fi
 
 # Create database after updates
 if [[ "$DATABASE_BACKUP" = true ]]; then
-	if ! make_database_backup "after"; then
-		printf "Creating a database backup after updating failed"
-		exit 1
-	fi
+	make_database_backup "after"
 fi
 
 printf "Finished updating\n"
