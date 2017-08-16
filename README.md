@@ -37,30 +37,7 @@ chmod +x wp-update.sh
 ```bash
 mv wp-update.sh /usr/local/bin/wp-update
 ```
-4 If the WP Update script was installed successfully, you should see something like this when you run `wp-update --help`
-
-```
-wp-update usage:
-	wp-update <path/to/website> [option...]
-
-wp-update example:
-	wp-update domains/my-website --plugins
-
-Options controlling update type:
-	-w, --core           Update WordPress core
-	-p, --plugins        Update plugins
-	-t, --themes         Update themes
-	-l, --translations   Update translations
-	-c, --comments       Update comments
-	-a, --all            Update everything
-
-	If you don't provide an update type option the --all option is used
-
-Options extra:
-	-h, --help           Show help
-	-f, --force          Force update without confirmation prompts
-	-x, --no-db-backup   Don't make a database backup before and after updating
-```
+4 Run `wp-update --help` to see if the WP Update script was installed successfully, you should [see something like this](https://github.com/keesiemeijer/wp-update/wiki/Options)
 
 ## Usage
 
@@ -68,9 +45,11 @@ Options extra:
 wp-update <path/to/website> [option...]
 ```
 
-Use `wp-update --help` to see what options are available. (see above)
+Use a relative or full path to the WP site you want to update.
 
-Without options the option `--all` is used.
+[available options](https://github.com/keesiemeijer/wp-update/wiki/Options)
+
+Without options everything is updated.
 Example:
 
 ```
@@ -83,16 +62,17 @@ Example to update plugins and themes only:
 wp-update <path/to/website> --plugins --themes
 ```
 
-**Note**: Check your website if your site was updated!
+**Note**: After updating it's recommended you inspect your website.
 
 ## Backups
 
 Backups are only created when something is updated. Newer backups replace previous backups as not to clutter your website. The `plugins` and `themes` folder backups are made before updating plugins or themes. Database backups are created before and after updating.
 
 **Note**: Test the database backups made by this script before you rely on this feature.
+
 ## Backup Directory
 
-The backup directory should not be publicly accessible. That's why backups are saved outside the website path you used provide `<path/to/website>`. The backup directory `wp-update-backups` is saved in the parent directory of the path used.
+The backup directory should ***not*** be publicly accessible. That's why backups are saved outside the website path you provide in `<path/to/website>`. The backup directory called `wp-update-backups` is saved in the parent directory of the path provided.
 
 For example, if you used this command 
 ```
@@ -100,13 +80,14 @@ wp-update /domains/my-site/public
 ```
 The backup directory is created at `/domains/my-site/wp-update-backups`.
 
-In most cases the directory will not be publicly accessible anymore. If you have permission issues or if it's still publicly accessible you can set a custom backup directory location in the config file (see below).
+In most cases this will fix the public access issue. Use a custom backup location if you have permission issues or if it's still publicly accessible. You can set a custom backup directory location in a config file (see below).
 
 ## Config file
-This script reads the `wp-update-config.txt` file in the root of your site if it exists. Here you can set custom variables used by this script
 
-### BACKUP_PATH
-Use this variable in the `wp-update-config.txt` to set a custom backup directory path. It's recommended this directory is not publicly accessible. This directory must exist on your server for the path to be used.
+If you add a `wp-update-config.txt` config file to the root of a site this script will import the custom config variables from it. For now there is only one variable you can set there
+
+#### Variable BACKUP_PATH
+Use this config variable to set a custom backup directory path. It's recommended this directory is not publicly accessible. This directory must exist on your server for the path to be used.
 
 Example of the `wp-update-config.txt` config file.
 ```
