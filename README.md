@@ -5,10 +5,10 @@ A bash script to update WordPress core, plugins, themes and comments via SSH.
 Features:
 
 * All updates are displayed before updating
-* Interactive prompts keeps you in control of what gets updated
+* Interactive confirmation prompts keeps you in control of what gets updated
 * Database and file backups (plugins, themes) are created when updates are made
 * Manage spam and trash comments
-* Use a custom backup directory location
+* Use a custom backup directory location for every site (or all sites)
 
 See [this screencast](https://github.com/keesiemeijer/wp-update/wiki/Screencast) to see it in action.
 
@@ -91,7 +91,7 @@ You can set a custom backup directory location for a site in the [config file](h
 
 ## Config file
 
-If you add a `wp-update-config.txt` config file to the root of a site this script will import the custom config variables from it. For now there is only one variable you can set there
+If you add a `wp-update-config.txt` config file to the root of a site this script will import the custom config variables from it. Right now there is only one variable you can set there.
 
 #### Variable BACKUP_PATH
 Use this config variable to set a custom backup directory path. It's recommended this directory is not publicly accessible. This directory must exist on your server for the path to be used.
