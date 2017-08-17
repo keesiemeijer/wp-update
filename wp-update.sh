@@ -115,9 +115,11 @@ function maybe_do_database_backup(){
 
 function make_database_backup(){
 	local prefix=$1
-	local db_name=$(wp config get --constant=DB_NAME --path="$CURRENT_PATH" --allow-root)
-	local db_date=$(date +"%Y-%m-%d")
-	local db_file="wp-update-${prefix}-${db_date}.sql"
+	local db_name db_date db_file
+
+	db_name=$(wp config get --constant=DB_NAME --path="$CURRENT_PATH" --allow-root)
+	db_date=$(date +"%Y-%m-%d")
+	db_file="wp-update-${prefix}-${db_date}.sql"
 
 	for f in "$BACKUP_PATH/wp-update-${prefix}-"*.sql; do
 		if is_file "$f"; then
@@ -133,12 +135,12 @@ function make_database_backup(){
 	mv "$db_file" "$BACKUP_PATH/$db_file"
 
 	if ! is_file "$BACKUP_PATH/$db_file"; then
-		printf "Failed to create a database backup file in: %s\n" "$BACKUP_PATH"
+		printf "Failed to create a database backup file in: %s\n%s\n" "$BACKUP_PATH" "$QUIT_MSG"
 		exit 1
 	fi
 
 	if ! [[ -s "$BACKUP_PATH/$db_file" ]]; then
-		printf "\Database backup file is empty in: %s\n" "$BACKUP_PATH"
+		printf "\Database backup file is empty in: %s\n%s\n" "$BACKUP_PATH" "$QUIT_MSG"
 		exit 1
 	fi
 
@@ -146,8 +148,11 @@ function make_database_backup(){
 }
 
 function update_wp_core(){
+	local update
+
 	printf "Checking WordPress version...\n"
 	update=$(wp core check-update --field=version --format=count --path="$CURRENT_PATH" --allow-root)
+
 	if [[ -z $update ]]; then
 		printf "WordPress is at the latest version\n"
 		return 0
@@ -171,9 +176,11 @@ function update_wp_core(){
 }
 
 function update_language(){
-	printf "Checking translations...\n"
+	local update
 
+	printf "Checking translations...\n"
 	update=$(wp core language list --update=available --format=csv --field=language --path="$CURRENT_PATH" --allow-root)
+
 	if [[ -z $update ]]; then
 		printf "No language updates available\n"
 		return 0
@@ -197,11 +204,13 @@ function update_language(){
 
 function update_asset(){
 	local asset_type=$1
-	local asset_path=$(wp "$asset_type" path --path="$CURRENT_PATH" --allow-root)
-	local update
+	local asset_path update
+	
+	asset_path=$(wp "$asset_type" path --path="$CURRENT_PATH" --allow-root)
 
 	printf "Checking %s updates...\n" "$asset_type"
 	update=$(wp "$asset_type" list --update=available --number=1 --format=count --path="$CURRENT_PATH" --allow-root)
+
 	if [[ $update = 0 ]]; then
 		printf "No %s updates available\n" "$asset_type"
 		return 0
@@ -227,7 +236,7 @@ function update_asset(){
 	if is_dir "$asset_path"; then
 		cp -r "$asset_path" "$BACKUP_PATH/${asset_type}s-backup"
 	else
-		printf "Could not find %ss path: %s\n" "$asset_type" "$asset_path"
+		printf "Could not find %ss path: %s\n%s\n" "$asset_type" "$asset_path" "$QUIT_MSG"
 		exit 1
 	fi
 
@@ -290,6 +299,8 @@ ARGUMENT_COUNT=0
 # Config error messages
 CONFIG_ERROR=''
 
+QUIT_MSG="Stopping updates..."
+
 # =============================================================================
 # Options
 # =============================================================================
@@ -332,7 +343,7 @@ do
 			-c|--comments) add_type_option "comments";;
 			-a|--all) add_type_option "all" ;;
 			 *)
-				printf "Unknown option: %s.\nUse \"wp-update --help\" to see all options\n" "$arg"
+				printf "Unknown option: %s.\nUse \"wp-update --help\" to see all options\n%s\n" "$arg" "$QUIT_MSG"
 				exit 1
 				;;
 		esac
@@ -358,7 +369,7 @@ if [[ $ARGUMENT_COUNT -lt 1 || -z "$SITE_PATH" ]]; then
 fi
 
 if ! is_dir "$SITE_PATH"; then
-	printf "Could not find Website directory: %s\n" "$SITE_PATH"
+	printf "Invalid Website directory: %s\n%s\n" "$SITE_PATH" "$QUIT_MSG"
 	exit 1
 fi
 
@@ -375,11 +386,11 @@ if is_file "wp-update-config.txt"; then
 
 	# Check if it's readable.
 	if ! [[ -r "wp-update-config.txt" ]]; then
-		printf "Config file wp-update-config.txt is not readable\n"
+		printf "Config file wp-update-config.txt is not readable\n%s\n" "$QUIT_MSG"
 		exit 1
 	fi
 
-	# Read the variables
+	# Read the variables (safer than sourcing the file)
 	while read -r line || [ -n "$line" ]; do
 		case $line in
 			BACKUP_PATH=*)
@@ -392,20 +403,20 @@ fi
 
 # Check if WordPress is installed.
 if ! wp core is-installed --path="$CURRENT_PATH" --allow-root 2> /dev/null; then
-	printf "No WordPress website found in: %s\n" "$CURRENT_PATH"
+	printf "No WordPress website found in: %s\n%s\n" "$CURRENT_PATH" "$QUIT_MSG"
 	exit 1
 fi
 
 # Set the backup directory path.
 if [[ -n "$CONFIG_BACKUP_PATH" ]]; then
 	readonly BACKUP_PATH="${CONFIG_BACKUP_PATH%/}"
-	CONFIG_ERROR="The backup path is set in the wp-update-config.txt config file\n"
+	CONFIG_ERROR="The backup path is set in the wp-update-config.txt config file"
 else
 	readonly PARENT_PATH="$(dirname "$CURRENT_PATH")"
 	readonly CURRENT_DIR="${PWD##*/}"
 
 	if ! is_dir "$PARENT_PATH"; then
-		printf "Parent directory doesn't exist: %s\n" "$PARENT_PATH"
+		printf "Parent directory doesn't exist: %s\n%s\n" "$PARENT_PATH" "$QUIT_MSG"
 		exit 1
 	fi
 
@@ -416,13 +427,13 @@ fi
 # Check if backup path exists.
 if ! is_dir "$BACKUP_PATH"; then
 	printf "Backup directory %s does not exist\n" "$BACKUP_PATH"
-	printf "$CONFIG_ERROR"
+	printf "%s\n%s\n" "$CONFIG_ERROR" "$QUIT_MSG"
 	exit 1
 fi
 
 if ! [[ -w "$BACKUP_PATH" ]]; then
 	printf "Cannot write to backup directory %s\n" "$BACKUP_PATH"
-	printf "$CONFIG_ERROR"
+	printf "%s\n%s\n" "$CONFIG_ERROR" "$QUIT_MSG"
 	exit 1
 fi
 
@@ -431,7 +442,7 @@ if [[ ${OPTIONS["all"]} || ${OPTIONS[plugins]} || ${OPTIONS["themes"]} || ${OPTI
 	printf "Checking network connection...\n"
 	if ! ping -c 3 -W 5 8.8.8.8 >> /dev/null 2>&1; then
 		# Bail if there is no internet connection
-		printf "No network connection detected\n\n"
+		printf "No network connection detected\n%s\n" "$QUIT_MSG"
 		exit 1
 	else
 		printf "Network connection detected\n"
