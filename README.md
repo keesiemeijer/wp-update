@@ -5,7 +5,7 @@ A bash script to update WordPress core, plugins, themes and comments via SSH.
 Features:
 
 * All updates are displayed before updating
-* Interactive confirmation prompts keeps you in control of what gets updated
+* Interactive confirmation prompts keep you in control of what gets updated
 * Database and file backups (plugins, themes) are created when updates are made
 * Manage spam and trash comments
 * Use a custom backup directory location for every site (or all sites)
