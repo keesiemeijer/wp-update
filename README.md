@@ -8,6 +8,7 @@ Features:
 * Interactive confirmation prompts keep you in control of what gets updated
 * Database and file backups (plugins, themes) are created when updates are made
 * Manage spam and trash comments
+* WP-CLI does all the heavy lifting in the background
 * Use a custom backup directory location for every site (or for all sites)
 
 See [this screencast](https://github.com/keesiemeijer/wp-update/wiki/Screencast) to see it in action.
