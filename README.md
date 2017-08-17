@@ -39,7 +39,7 @@ chmod +x wp-update.sh
 ```bash
 mv wp-update.sh /usr/local/bin/wp-update
 ```
-4 Run `wp-update --help` to see if the WP Update script was installed successfully, you should [see something like this](https://github.com/keesiemeijer/wp-update/wiki/Options)
+4 Run `wp-update --help` to see if the WP Update script was installed successfully. You should [see something like this](https://github.com/keesiemeijer/wp-update/wiki/Options)
 
 ## Usage
 
