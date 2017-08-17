@@ -297,6 +297,7 @@ CONFIG_ERROR=''
 for arg in "$@"
 do
 	if ! [[ "$arg" =~ ^- ]]; then
+		# Doesn't start with a dash.
 		ARGUMENT_COUNT=$((ARGUMENT_COUNT + 1))
 		if [[ "$ARGUMENT_COUNT" = 1 ]]; then
 			readonly SITE_PATH=$arg;
@@ -331,7 +332,7 @@ do
 			-c|--comments) add_type_option "comments";;
 			-a|--all) add_type_option "all" ;;
 			 *)
-				printf "Unknown option: %s. Use \"wp-update --help\" to see all options\n" "$1"
+				printf "Unknown option: %s.\nUse \"wp-update --help\" to see all options\n" "$arg"
 				exit 1
 				;;
 		esac
