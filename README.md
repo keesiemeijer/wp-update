@@ -2,6 +2,8 @@
 
 A bash script to update WordPress core, plugins, themes and comments via SSH.
 
+See [this screencast](https://github.com/keesiemeijer/wp-update/wiki/Screencast) to see it in action.
+
 Features:
 
 * All updates are displayed before updating
@@ -10,8 +12,6 @@ Features:
 * Manage spam and trash comments
 * WP-CLI does all the heavy lifting in the background
 * Use a custom backup directory location for every site (or for all sites)
-
-See [this screencast](https://github.com/keesiemeijer/wp-update/wiki/Screencast) to see it in action.
 
 ## requirements:
 
