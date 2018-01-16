@@ -88,16 +88,18 @@ wp-update domains/my-site
 ```
 The backup directory is created at `domains/wp-update-backups`.
 
-You can set a custom backup directory location for a site in the [config file](https://github.com/keesiemeijer/wp-update#config-file). Set it there if there are permission issues or if the location is still publicly accessible.
+You can set a [custom backup path](https://github.com/keesiemeijer/wp-update#custom-backup-path) for each site if there are permission issues or if the location is still publicly accessible.
 
-## Config file
+## Custom backup path
 
-If you add a `wp-update-config.txt` config file to the root of a site this script will import the custom config variables from it. Right now there is only one variable you can set there.
+Add custom backup paths with environment variables in your `.bashrc` or `.bash_profile` file.
 
-#### Variable BACKUP_PATH
-Use this config variable to set a custom backup directory path. It's recommended this directory is not publicly accessible. This directory must exist on your server for the path to be used.
+Let's say you have a site directory `my-awesome-site`. Set the custom backup path for this site like this in your `.bash_profile` file.
 
-Example of the `wp-update-config.txt` config file.
+```bash
+export WP_UPDATE_BACKUP_PATH_my-awesome-site=/custom/path/to/backups/my-awesome-site
 ```
-BACKUP_PATH=/custom/path/to/backups
-```
+
+As you can see the environment variable consists of `WP_UPDATE_BACKUP_PATH_` and the site directory `my-awesome-site`. The custom path that will be used for this site is now `/custom/path/to/backups/my-awesome-site`. It's recommended this directory is not publicly accessible. This directory must exist on your server for the path to be used.
+
+After adding the custom backup path you'll need to quit the terminal and log back in to your server via SSH before the environment variable is used. 

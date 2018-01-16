@@ -296,9 +296,6 @@ ALLOPTIONS=()
 # Command arguments found
 ARGUMENT_COUNT=0
 
-# Config error messages
-CONFIG_ERROR=''
-
 QUIT_MSG="Stopping updates..."
 
 # =============================================================================
@@ -379,26 +376,12 @@ cd "$SITE_PATH" || exit
 # Set the website directory to a full path.
 readonly CURRENT_PATH=$(pwd)
 
-# Check if there is a config-file
-if is_file "wp-update-config.txt"; then
+# Current directory name
+readonly CURRENT_DIR="${PWD##*/}"
 
-	printf "Config file wp-update-config.txt detected\n"
-
-	# Check if it's readable.
-	if ! [[ -r "wp-update-config.txt" ]]; then
-		printf "Config file wp-update-config.txt is not readable\n%s\n" "$QUIT_MSG"
-		exit 1
-	fi
-
-	# Read the variables (safer than sourcing the file)
-	while read -r line || [ -n "$line" ]; do
-		case $line in
-			BACKUP_PATH=*)
-				readonly CONFIG_BACKUP_PATH="${line/BACKUP_PATH=/}"
-				printf "Setting custom backup directory to: %s\n" "$CONFIG_BACKUP_PATH"
-			;;
-		esac
-	done < wp-update-config.txt
+if [[ -z "$CURRENT_DIR" ]]; then
+	printf "Current directory not found\n"
+	exit 1
 fi
 
 # Check if WordPress is installed.
@@ -407,13 +390,12 @@ if ! wp core is-installed --path="$CURRENT_PATH" --allow-root 2> /dev/null; then
 	exit 1
 fi
 
-# Set the backup directory path.
-if [[ -n "$CONFIG_BACKUP_PATH" ]]; then
-	readonly BACKUP_PATH="${CONFIG_BACKUP_PATH%/}"
-	CONFIG_ERROR="The backup path is set in the wp-update-config.txt config file"
-else
+readonly ENV_BACKUP_PATH="WP_UPDATE_BACKUP_PATH_$CURRENT_DIR";
+
+# Check if the backup path enviroment variable was set.
+if [[ -z "${!ENV_BACKUP_PATH}" ]]; then
+	# Not set, use parent directory as a backup path 
 	readonly PARENT_PATH="$(dirname "$CURRENT_PATH")"
-	readonly CURRENT_DIR="${PWD##*/}"
 
 	if ! is_dir "$PARENT_PATH"; then
 		printf "Parent directory doesn't exist: %s\n%s\n" "$PARENT_PATH" "$QUIT_MSG"
@@ -421,19 +403,27 @@ else
 	fi
 
 	readonly BACKUP_PATH="${PARENT_PATH%/}/wp-update-backups/$CURRENT_DIR"
-	mkdir -p "$BACKUP_PATH"
+	if ! is_dir "$BACKUP_PATH"; then
+		printf "Creating backup path: %s\n" "$BACKUP_PATH"
+		mkdir -p "$BACKUP_PATH"	|| exit
+	else
+		printf "Backup path: %s\n" "$BACKUP_PATH"
+	fi
+	
+else
+	# Backup path enviroment variable is set.
+	readonly BACKUP_PATH="${!ENV_BACKUP_PATH}"
+	printf "Backup path (from environment variable): %s\n" "$BACKUP_PATH"
 fi
 
 # Check if backup path exists.
 if ! is_dir "$BACKUP_PATH"; then
-	printf "Backup directory %s does not exist\n" "$BACKUP_PATH"
-	printf "%s\n%s\n" "$CONFIG_ERROR" "$QUIT_MSG"
+	printf "Backup directory %s does not exist\n%s\n" "$BACKUP_PATH" "$QUIT_MSG"
 	exit 1
 fi
 
 if ! [[ -w "$BACKUP_PATH" ]]; then
-	printf "Cannot write to backup directory %s\n" "$BACKUP_PATH"
-	printf "%s\n%s\n" "$CONFIG_ERROR" "$QUIT_MSG"
+	printf "Cannot write to backup directory %s\n%s\n" "$BACKUP_PATH" "$QUIT_MSG"
 	exit 1
 fi
 
