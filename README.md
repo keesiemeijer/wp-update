@@ -78,7 +78,9 @@ Backups are only created when something is updated. Newer backups replace previo
 
 ## Backup Directory
 
-The backup directory ***should not be publicly accessible***. That's why backups are saved outside the website path you provide in `<path/to/website>`. In most cases this will fix the public access issue.
+The backup directory ***should not be publicly accessible***.
+
+That's why backups are saved outside the website path you provide in `<path/to/website>`. In most cases this will fix the public access issue.
 
 Before updating a backup directory called `wp-update-backups` is created if it doesn't exist yet. 
 
