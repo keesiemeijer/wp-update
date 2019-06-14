@@ -248,6 +248,32 @@ function update_asset(){
 	UPDATE_TRANSLATIONS=true
 }
 
+function delete_asset_backups() {
+	printf "Deleting backed up plugins and themes...\n"
+
+	if [[ "$USE_PROMPT" = true ]]; then
+		read -p "Do you want to delete backups of plugins and themes [y/n]" -r
+		if ! [[ $REPLY = "Y" ||  $REPLY = "y" ]]; then
+			printf "Stopped deleting backups\n"
+			return 0
+		fi
+	fi
+
+	if is_dir "$BACKUP_PATH/plugins-backup"; then
+		printf "Deleting plugin backups...\n"
+		rm -rf "$BACKUP_PATH/plugins-backup"
+	else
+		printf "No backed up plugins found to delete\n"
+	fi
+
+	if is_dir "$BACKUP_PATH/themes-backup"; then
+		printf "Deleting theme backups...\n"
+		rm -rf is_dir "$BACKUP_PATH/themes-backup"
+	else
+		printf "No backed up themes found to delete\n"
+	fi
+}
+
 function update_comments() {
 	local status=$1
 
@@ -328,11 +354,13 @@ do
 				printf "Options extra:\n"
 				printf -- "\t-h, --help           Show help\n"
 				printf -- "\t-f, --force          Force update without confirmation prompts\n"
-				printf -- "\t-x, --no-db-backup   Don't make a database backup before and after updating\n\n"
+				printf -- "\t-x, --no-db-backup   Don't make a database backup before and after updating\n"
+				printf -- "\t-d, --delete-backups Delete theme and plugin backups\n\n"
 				exit 0
 				;;
 			-f|--force) USE_PROMPT=false ;;
 			-x|--no-db-backup) DATABASE_BACKUP='none' ;;
+			-d|--delete-backups) add_type_option "delete_back_ups" ;;
 			-w|--core) add_type_option "core" ;;
 			-p|--plugins) add_type_option "plugins" ;;
 			-t|--themes) add_type_option "themes";;
@@ -427,18 +455,6 @@ if ! [[ -w "$BACKUP_PATH" ]]; then
 	exit 1
 fi
 
-# Check network connection for options that need it.
-if [[ ${OPTIONS["all"]} || ${OPTIONS[plugins]} || ${OPTIONS["themes"]} || ${OPTIONS["core"]} ||  ${OPTIONS["translations"]} ]]; then
-	printf "Checking network connection...\n"
-	if ! ping -c 3 -W 5 8.8.8.8 >> /dev/null 2>&1; then
-		# Bail if there is no internet connection
-		printf "No network connection detected\n%s\n" "$QUIT_MSG"
-		exit 1
-	else
-		printf "Network connection detected\n"
-	fi
-fi
-
 # Update everything except translations.
 for type in "${ALLOPTIONS[@]}"
 do  
@@ -462,6 +478,9 @@ do
 				update_wp_core
 				update_comments "spam"
 				update_comments "trash"
+				;;
+			delete_back_ups)
+				delete_asset_backups
 				;;
 			*)
 				if ! [[ 'translations' = "$type" ]]; then
