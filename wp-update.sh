@@ -297,7 +297,7 @@ function update_comments() {
 	maybe_do_database_backup
 
 	printf "Deleting %s comments\n" "$status"
-	wp comment delete $(wp comment list --status="$status" --format=ids --path="$CURRENT_PATH" --allow-root) --path="$CURRENT_PATH" --allow-root
+	wp comment delete "$(wp comment list --status="$status" --format=ids --path="$CURRENT_PATH" --allow-root)" --path="$CURRENT_PATH" --allow-root
 }
 
 # =============================================================================
@@ -360,7 +360,7 @@ do
 				;;
 			-f|--force) USE_PROMPT=false ;;
 			-x|--no-db-backup) DATABASE_BACKUP='none' ;;
-			-d|--delete-backups) add_type_option "delete_back_ups" ;;
+			-d|--delete-backups) add_type_option "delete_backups" ;;
 			-w|--core) add_type_option "core" ;;
 			-p|--plugins) add_type_option "plugins" ;;
 			-t|--themes) add_type_option "themes";;
@@ -479,7 +479,7 @@ do
 				update_comments "spam"
 				update_comments "trash"
 				;;
-			delete_back_ups)
+			delete_backups)
 				delete_asset_backups
 				;;
 			*)
